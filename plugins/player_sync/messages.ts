@@ -24,6 +24,7 @@ export type IpcPlayerData = {
 	recipe_notifications?: string,
 	// Components the upload was serialized with, all when missing
 	components?: Record<string, boolean> | unknown[],
+	destination_instance_id?: number, // set_destination's instance, on the leave upload only; not player data
 }
 
 const jsonPlayerData = Type.Object({
@@ -109,6 +110,7 @@ export class UploadRequest {
 		public instanceId: number,
 		public playerName: string,
 		public playerData: IpcPlayerData,
+		public destinationInstanceId?: number,
 	) {
 	}
 
@@ -116,10 +118,33 @@ export class UploadRequest {
 		"instanceId": Type.Integer(),
 		"playerName": Type.String(),
 		"playerData": jsonPlayerData,
+		"destinationInstanceId": Type.Optional(Type.Integer()),
 	});
 
 	static fromJSON(json: Static<typeof UploadRequest.jsonSchema>) {
-		return new this(json.instanceId, json.playerName, json.playerData as IpcPlayerData);
+		return new this(json.instanceId, json.playerName, json.playerData as IpcPlayerData, json.destinationInstanceId);
+	}
+}
+
+/** The stored data of a player switching to the instance it is sent to, so the join there needs no download */
+export class PrefetchEvent {
+	declare ["constructor"]: typeof PrefetchEvent;
+	static type = "event" as const;
+	static src = "controller" as const;
+	static dst = "instance" as const;
+	static plugin = "player_sync" as const;
+
+	constructor(
+		public playerData: IpcPlayerData,
+	) {
+	}
+
+	static jsonSchema = Type.Object({
+		"playerData": jsonPlayerData,
+	});
+
+	static fromJSON(json: Static<typeof PrefetchEvent.jsonSchema>): PrefetchEvent {
+		return new this(json.playerData as IpcPlayerData);
 	}
 }
 
