@@ -112,6 +112,7 @@ export const plugin: lib.PluginDeclaration = {
 		messages.ReleaseRequest,
 		messages.UploadRequest,
 		messages.DownloadRequest,
+		messages.PrefetchEvent,
 		messages.DatabaseStatsRequest,
 	],
 	permissions: [
