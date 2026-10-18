@@ -120,6 +120,24 @@ describe("player_sync controller", function() {
 			assert.ok(sent[0].message instanceof PrefetchEvent);
 			assert.deepEqual(sent[0].message.playerData, data(1));
 		});
+		it("should tag the prefetch and acquire reply with one token per controller run", async function() {
+			const { controller, sent, upload } = await setup();
+			await upload(new UploadRequest(1, "test", data(1), 2));
+			const acquire = await mock.getHandler(controller, AcquireRequest)(new AcquireRequest(2, "test"));
+			assert.equal(acquire.status, "acquired");
+			assert.ok(sent[0].message.token);
+			assert.equal(acquire.token, sent[0].message.token);
+
+			const again = await setup();
+			await again.upload(new UploadRequest(1, "test", data(1), 2));
+			assert.notEqual(again.sent[0].message.token, sent[0].message.token);
+		});
+		it("should not need a token on a busy reply", async function() {
+			const { controller } = await setup();
+			const acquire = mock.getHandler(controller, AcquireRequest);
+			await acquire(new AcquireRequest(3, "test"));
+			assert.equal((await acquire(new AcquireRequest(2, "test"))).token, undefined);
+		});
 		it("should send the stored copy, with the parts the upload's components left out", async function() {
 			const { sent, upload } = await setup();
 			await upload(new UploadRequest(1, "test", { ...data(1), force: "player", tag: "first" }));

@@ -28,6 +28,7 @@ type IpcAcquireResponse = {
 	generation?: number,
 	has_data?: boolean,
 	message?: string,
+	token?: string,
 }
 
 /**
@@ -136,6 +137,7 @@ export default async function(context: InstancePluginContext) {
 					generation: acquireResponse.generation,
 					has_data: acquireResponse.hasData,
 					message: acquireResponse.message,
+					token: acquireResponse.token,
 				};
 			} catch (err: any) {
 				if (!(err instanceof lib.SessionLost)) {
@@ -279,13 +281,15 @@ export default async function(context: InstancePluginContext) {
 
 	// A copy of a player's stored data, sent ahead while they switch to this instance (player_sync.prefetch_inventory)
 	async function handlePrefetch(event: PrefetchEvent) {
-		const { playerData } = event;
+		const { playerData, token } = event;
 		const { name, generation } = playerData;
 		logger.verbose(`Prefetching ${name}`);
 		// This side doesn't know the save's cleared recipe list, so the whole stored list goes as a full delta
-		await sendPlayerData(playerData, undefined, (chunk, number, total, extra) => (
-			`/sc player_sync.prefetch_inventory('${name}',${generation},'${chunk}',${number},${total}${extra})`
-		), true);
+		await sendPlayerData(playerData, undefined, (chunk, number, total, extra) => {
+			const tokenArg = number === 1 ? `,'${token}'` : "";
+			const args = `'${name}',${generation},'${chunk}',${number},${total}${extra}${tokenArg}`;
+			return `/sc player_sync.prefetch_inventory(${args})`;
+		}, true);
 	}
 	instance.handle(PrefetchEvent, handlePrefetch);
 
